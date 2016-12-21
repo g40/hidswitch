@@ -75,15 +75,14 @@ static unsigned char Out_Data[1] = {0};
 static const char StringStorage[] = {"Cypress PSoC USB HID: Stay Connected My Friends"};
 static uint8 i;
 static uint8 key;
+static uint8_t btn = 0;
 
 
 int main()
 {
     CYGlobalIntEnable; 
-	LCD_Char_1_Start();
-	LCD_Char_1_Position(0,0);
-	LCD_Char_1_PrintString("PSoC 3 Keyboard");
-	/*Start USBFS Operation and Device 0 and with 5V operation*/ 
+
+    /*Start USBFS Operation and Device 0 and with 5V operation*/ 
 	USBFS_1_Start(0, USBFS_1_DWR_VDDD_OPERATION);
 	/*Enables OUT EP*/
 	USBFS_1_EnableOutEP(2);
@@ -92,12 +91,10 @@ int main()
 	/*Begins USB Traffic*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
 	
+    reg_led_Write(1);
 
     for(;;)
     {
-		/*Function to check for Caps Lock button press on DVK*/
-		CapsLock();
-		
 		/*Checks for ACK from host*/
 		if(USBFS_1_bGetEPAckState(1)) 
 		{
@@ -116,48 +113,10 @@ int main()
 void In_EP (void)
 {
 	/*Checks for Type_Input(SW1) to be pressed. This ensures that the text is only typed when button is pressed*/
-	if(Type_Input_Read() == 0) 
+	//if(Type_Input_Read() == 0) 
 	{
 		/*Waits for button to be released. This is a de-bounce implimentation*/
-		while(Type_Input_Read() == 0);   
-			/*Checks to be sure a null is not present*/
-			while(StringStorage[i] != 0) 
-			{
-				/*Ensures that all ASCII values in the string are in range*/
-				if((StringStorage[i] >= 0x20) && (StringStorage[i] <= 0x7F))
-				{
-					/*Removes 0x20 offset to have key presses begin at 0. This is not required but used to make the example easier to understand.*/
-					key = StringStorage[i] - 0x20; 
-					if(((key >= 1) && (key <= 6)) || ((key >= 8) && (key <=11)) || (key == 26) || (key == 28) || ((key >= 30) && (key <=58)) || (key == 62) || (key == 63) || ((key >= 91) && (key <= 94)))
-					{
-						/*Applies Shift key is any keys that require the shift button is pressed. The buttons include '!', '@', 'B', etc.*/
-						Keyboard_Data[0] = LSHIFT; 
-					}
-					else
-					{
-						/*If the shift is not required, then the modifier byte remains set to 0x00*/
-						Keyboard_Data[0] = 0x00; 
-					}
-				
-					/*Loads the converted Scan Code using LUT into the fist Key Code array location*/
-					Keyboard_Data[2] = aASCII_ToScanCode[key]; 
-				}
-				
-					/*Loads EP1 for a IN transfer to PC*/
-					USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-					/*Waits for ACK from PC*/
-					while(!USBFS_1_bGetEPAckState(1));
-					/*Resets modifer byte to 0x00*/
-					Keyboard_Data[0] = 0x00; 
-					/*Resets keycode 0 to 0x00*/
-					Keyboard_Data[2] = 0x00; 
-					/*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
-					USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-					/*Waits for ACK from PC*/
-					while(!USBFS_1_bGetEPAckState(1));
-					/*Advances to the next ASCII Character*/
-					i++;		
-			}	
+		// while(Type_Input_Read() == 0);   
 	
 		/*Loads 0x28 (Enter/Return) into keycode 0 to move to next line*/
 		Keyboard_Data[2] = ENTER;
@@ -182,72 +141,15 @@ void Out_EP (void)
 	/*Reads the OUT Report data */
 	Out_Data[0] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[0];
 
-
-	/*If the Num Lock is enabled, display on LCD and LED*/
-	if ((Out_Data[0] & 0x01)!= 0)
+	if (Out_Data[0] == 0xFF)
 	{
-		LCD_Char_1_Position(1,0);
-		LCD_Char_1_PrintString("NUM");
-		Keyboard_Data[2] = 0x00;
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		Num_Lock_Write(1);
+        reg_led_Write(1);
 	}
-	
-	/*If the Num Lock not is enabled, clear the LCD and LED*/
-	else
-	{
-		LCD_Char_1_Position(1,0);
-		LCD_Char_1_PrintString("   ");
-		Num_Lock_Write(0);
-	}
-		
-	/*If the Caps Lock is enabled, display on LCD and LED*/
-	if((Out_Data[0] & 0x02)!= 0)
-	{
-		LCD_Char_1_Position(1,6);
-		LCD_Char_1_PrintString("CAPS");
-		Keyboard_Data[2] = 0x00;
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		Caps_Lock_Write(1);
-	}
-	
-	/*If the Caps Lock not is enabled, clear the LCD and LED*/
-	else
-	{
-		LCD_Char_1_Position(1,6);
-		LCD_Char_1_PrintString("    ");
-		Caps_Lock_Write(0);
-	}
-			
-	
-	/*If the Scroll Lock is enabled, display on LCD and LED*/				
-	if((Out_Data[0] & 0x04)!= 0)
-	{
-		LCD_Char_1_Position(1,13);
-		LCD_Char_1_PrintString("SCL");
-		Keyboard_Data[2] = 0x00;
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		Scroll_Lock_Write(1);
-	} 
-	/*If the Scroll Lock not is enabled, clear the LCD and LED*/
-	else
-	{
-		LCD_Char_1_Position(1,13);
-		LCD_Char_1_PrintString("   ");
-		Scroll_Lock_Write(0);
-	}
+	else if (Out_Data[0] == 0x00)
+    {
+        reg_led_Write(0);
+    }
 }
 
-void CapsLock (void)
-{
-	/*Checks if Caps Lock (SW2) has been pressed. If so, loads the Caps Lock scan code into the key code array*/
-	if(Caps_Lock_Key_Read() == 0)
-	{
-		while(Caps_Lock_Key_Read() == 0);
-		Keyboard_Data[2] = CAPS;
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		while(!USBFS_1_bGetConfiguration());
-	}
-}
 /* End of File */
 
