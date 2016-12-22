@@ -70,7 +70,7 @@ const uint8 aASCII_ToScanCode[] = {0x2C, 0x1E, 0x34, 0x20, 0x21, 0x22, 0x24, 0x3
 /* Array of Keycode information to send to PC */
 static unsigned char Keyboard_Data[8] = {0, 0, 0, 0, 0, 0, 0, 0}; 
 /* Array of information pertaining to LEDS */
-static unsigned char Out_Data[1] = {0};
+static unsigned char Out_Data[2] = {0,0};
 /* String that will be printed when Type_Input (SW2) is pressed */
 static const char StringStorage[] = {"Cypress PSoC USB HID: Stay Connected My Friends"};
 static uint8 i;
@@ -92,6 +92,12 @@ int main()
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
 	
     reg_led_Write(1);
+
+    reg_led_Write(0);
+
+    reg_led_Write(1);
+    
+    reg_led_Write(0);
 
     for(;;)
     {
@@ -140,6 +146,7 @@ void Out_EP (void)
 {
 	/*Reads the OUT Report data */
 	Out_Data[0] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[0];
+	Out_Data[1] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[1];
 
 	if (Out_Data[0] == 0xFF)
 	{
