@@ -52,7 +52,6 @@
 
 void In_EP (void);
 void Out_EP (void);
-void CapsLock (void);
 
 /* External variable where OUT Report data is stored */
 extern uint8 USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF_SIZE];
