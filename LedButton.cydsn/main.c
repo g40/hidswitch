@@ -116,32 +116,31 @@ int main()
     return 0;
 }
 
+//
 void In_EP (void)
 {
-	/*Checks for Type_Input(SW1) to be pressed. This ensures that the text is only typed when button is pressed*/
-	//if(Type_Input_Read() == 0) 
-	{
-		/*Waits for button to be released. This is a de-bounce implimentation*/
-		// while(Type_Input_Read() == 0);   
-	
-		/*Loads 0x28 (Enter/Return) into keycode 0 to move to next line*/
-		Keyboard_Data[2] = ENTER;
-		/*Loads EP1 for a IN transfer to PC*/
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		/*Waits for ACK from PC*/
-		while(!USBFS_1_bGetEPAckState(1));
-		/*Resets keycode 0 to 0x00*/
-		Keyboard_Data[2] = 0x00;
-		/*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
-		USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-		/*Waits for ACK from PC*/
-		while(!USBFS_1_bGetEPAckState(1));
-		/*Resets string position counter to 0 to type string again*/
-		i=0;
-	}
+    Keyboard_Data[0] = Pin_Btn_Read();
+	/*Loads 0x28 (Enter/Return) into keycode 0 to move to next line*/
+	Keyboard_Data[2] = ENTER;
+	/*Loads EP1 for a IN transfer to PC*/
+	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
+	/*Waits for ACK from PC*/
+	while(!USBFS_1_bGetEPAckState(1))
+    {
+        /* NOP */;
+    }
+	/*Resets keycode 0 to 0x00*/
+	Keyboard_Data[2] = 0x00;
+	/*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
+	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
+	/*Waits for ACK from PC*/
+	while(!USBFS_1_bGetEPAckState(1))
+    {
+        /* NOP */;
+    }
 }
 	
-
+//
 void Out_EP (void)
 {
 	/*Reads the OUT Report data */
