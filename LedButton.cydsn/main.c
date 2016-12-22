@@ -56,25 +56,12 @@ void CapsLock (void);
 
 /* External variable where OUT Report data is stored */
 extern uint8 USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF_SIZE];
-
-//Creats a Scan Code Look Up Table for the various ASCII values
-const uint8 aASCII_ToScanCode[] = {0x2C, 0x1E, 0x34, 0x20, 0x21, 0x22, 0x24, 0x34, 0x26, 0x27, 0x25, 0x2E, 0x36, 
-								   0x2D, 0x37, 0x38, 0x27, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 
-								   0x33, 0x33, 0x36, 0x2E, 0x37, 0x38, 0x1F, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 
-								   0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15 ,0x16, 
-								   0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x2F, 0x31, 0x30, 0x23, 0x2D, 0x35, 
-								   0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 
-								   0x11, 0x12, 0x13, 0x14, 0x15 ,0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 
-								   0x2F, 0x31, 0x30, 0x35, 0x4C};
-								   
+						   
 /* Array of Keycode information to send to PC */
 static unsigned char Keyboard_Data[8] = {0, 0, 0, 0, 0, 0, 0, 0}; 
 /* Array of information pertaining to LEDS */
-static unsigned char Out_Data[2] = {0,0};
-/* String that will be printed when Type_Input (SW2) is pressed */
-static const char StringStorage[] = {"Cypress PSoC USB HID: Stay Connected My Friends"};
-static uint8 i;
-static uint8 key;
+static unsigned char LED_Data[1] = {0 };
+
 static uint8_t btn = 0;
 
 
@@ -101,6 +88,9 @@ int main()
 
     for(;;)
     {
+        //
+        Keyboard_Data[0] = Pin_Btn_Read();
+        
 		/*Checks for ACK from host*/
 		if(USBFS_1_bGetEPAckState(1)) 
 		{
@@ -144,14 +134,13 @@ void In_EP (void)
 void Out_EP (void)
 {
 	/*Reads the OUT Report data */
-	Out_Data[0] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[0];
-	Out_Data[1] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[1];
+	LED_Data[0] = USBFS_1_DEVICE0_CONFIGURATION0_INTERFACE0_ALTERNATE0_HID_OUT_BUF[0];
 
-	if (Out_Data[0] == 0xFF)
+	if (LED_Data[0] == 0xFF)
 	{
         reg_led_Write(1);
 	}
-	else if (Out_Data[0] == 0x00)
+	else if (LED_Data[0] == 0x00)
     {
         reg_led_Write(0);
     }
