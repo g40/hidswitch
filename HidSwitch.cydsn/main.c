@@ -99,7 +99,7 @@ void In_EP (void)
 {
     Keyboard_Data[0] = Pin_Btn_Read();
 	/*Loads 0x28 (Enter/Return) into keycode 0 to move to next line*/
-	Keyboard_Data[2] = ENTER;
+	Keyboard_Data[2] = 0xFF;
 	/*Loads EP1 for a IN transfer to PC*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
 	/*Waits for ACK from PC*/
