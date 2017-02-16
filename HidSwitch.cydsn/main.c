@@ -63,7 +63,8 @@ int main()
 	USBFS_1_EnableOutEP(2);
 	/*Waits for USB to enumerate*/ 
 	while(!USBFS_1_bGetConfiguration()); 		
-	/*Begins USB Traffic*/
+
+    /*Begins USB Traffic*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
 	
     reg_led_Write(1);
@@ -77,7 +78,7 @@ int main()
     for(;;)
     {
         //
-        Keyboard_Data[0] = Pin_Btn_Read();
+        Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
         
 		/*Checks for ACK from host*/
 		if(USBFS_1_bGetEPAckState(1)) 
@@ -97,9 +98,7 @@ int main()
 //
 void In_EP (void)
 {
-    Keyboard_Data[0] = Pin_Btn_Read();
-	/*Loads 0x28 (Enter/Return) into keycode 0 to move to next line*/
-	Keyboard_Data[2] = 0xFF;
+    Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
 	/*Loads EP1 for a IN transfer to PC*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
 	/*Waits for ACK from PC*/
@@ -107,15 +106,15 @@ void In_EP (void)
     {
         /* NOP */;
     }
-	/*Resets keycode 0 to 0x00*/
-	Keyboard_Data[2] = 0x00;
-	/*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
+#if 0
+    /*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
 	/*Waits for ACK from PC*/
 	while(!USBFS_1_bGetEPAckState(1))
     {
         /* NOP */;
     }
+#endif    
 }
 	
 //
