@@ -96,7 +96,7 @@ int main()
     // this should be true after reset
     if (usb_reset == 1)
     {
-        flash(50,10);
+//      flash(50,10);
         usb_reset = 0;
     }
     
@@ -139,7 +139,7 @@ bool In_EP()
         if (reset)
         {
             // slow
-            flash(250,10);
+            flash(50,5);
             //
             break;
         }
