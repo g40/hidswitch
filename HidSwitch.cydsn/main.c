@@ -39,6 +39,7 @@
 
 #include <device.h>
 
+
 void In_EP (void);
 void Out_EP (void);
 
@@ -55,6 +56,8 @@ static uint8_t btn = 0;
 
 int main()
 {
+    int i = 0;
+    
     CYGlobalIntEnable; 
 
     /*Start USBFS Operation and Device 0 and with 5V operation*/ 
@@ -62,11 +65,23 @@ int main()
 	/*Enables OUT EP*/
 	USBFS_1_EnableOutEP(2);
 	/*Waits for USB to enumerate*/ 
-	while(!USBFS_1_bGetConfiguration()); 		
+
+    while(!USBFS_1_bGetConfiguration())
+    {
+        // NOP    
+    }
 
     /*Begins USB Traffic*/
-	USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
+	// USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
 	
+    for (i = 0; i < 10; i++)
+    {
+        reg_led_Write(1);
+        CyDelay(50);
+        reg_led_Write(0);
+        CyDelay(50);
+    }
+    
     reg_led_Write(1);
 
     reg_led_Write(0);
