@@ -53,89 +53,75 @@ static unsigned char Keyboard_Data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 /* Array of information pertaining to LEDS */
 static unsigned char LED_Data[1] = {0 };
 
-static uint8_t btn = 0;
-int sof_flag = 0;
-const int maxcount = 5000;
+
+// maintain SOF count
+volatile int sof_count = 0;
+volatile int sof_prev = 0;
+// signals a USB reset event
+volatile uint8 usb_reset = 0;
+
+#define OUT_EP      (0x02u)
+
+//-----------------------------------------------------------------------------
+void flash(int duration,int count)
+{
+    int i;
+    for (i = 0; i < count; i++)
+    {
+        reg_led_Write(1);
+        CyDelay(duration);
+        reg_led_Write(0);
+        CyDelay(duration);
+    }
+}
+
+//-----------------------------------------------------------------------------
 int main()
 {
-    int i = 0;
-    int sof_prev = 0;
-    int sof_x = 0;
-    bool ok = false;
+    //
     CYGlobalIntEnable; 
 
-    /*Start USBFS Operation and Device 0 and with 5V operation*/ 
+    // Start USBFS Operation and Device 0 and with 5V operation
 	USBFS_1_Start(0, USBFS_1_DWR_VDDD_OPERATION);
-	/*Enables OUT EP*/
-	USBFS_1_EnableOutEP(2);
-	/*Waits for USB to enumerate*/ 
+	
+    // Enables OUT EP
+	USBFS_1_EnableOutEP(OUT_EP);
 
+    // Wait for USB to enumerate
     while(!USBFS_1_bGetConfiguration())
     {
         // NOP    
     }
 
-    /*Begins USB Traffic*/
-	// USBFS_1_LoadInEP(1, Keyboard_Data, 8);    
-	
-    for (i = 0; i < 10; i++)
+    // this should be true after reset
+    if (usb_reset == 1)
     {
-        reg_led_Write(1);
-        CyDelay(50);
-        reg_led_Write(0);
-        CyDelay(50);
+        flash(50,10);
+        usb_reset = 0;
     }
     
-    reg_led_Write(1);
-
-    reg_led_Write(0);
-
-    reg_led_Write(1);
-    
-    reg_led_Write(0);
-
     //CyWdtStart(CYWDT_1024_TICKS,CYWDT_LPMODE_NOCHANGE); 
-    sof_flag = 0;
-    for(;;)
+    
+    for (;;)
     {
         //
         Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
-        
-		// checks for ACK from host
-		// if (USBFS_1_bGetEPAckState(1)) 
-		{
-			//Function to Send Data to PC
-            ok = In_EP();
-            // we got an ack in time
-			if (ok == true)
-            {
-    			Out_EP();
-            }
-            // clear watchdog
-            // CyWdtClear();
-		}
-    
-        // flash to indicate a problem
-        if (ok == false)
-        {
-            reg_led_Write(1);
-            CyDelay(100);
-            reg_led_Write(0);
-            CyDelay(50);
-            reg_led_Write(1);
-            CyDelay(100);
-            reg_led_Write(0);
-            ok = true;
-        }
+        //
+        In_EP();
+        //
+        Out_EP();
+        // clear watchdog
+        // CyWdtClear();
     }
-    
+    //   
     return 0;
 }
 
+//-----------------------------------------------------------------------------
 //
 bool In_EP()
 {
-    int count = 0;
+    uint8 reset = 0;
     //
     Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
 	// Loads EP1 for a IN transfer to PC
@@ -143,10 +129,19 @@ bool In_EP()
 	// Waits for ACK from PC
 	while (!USBFS_1_bGetEPAckState(1))
     {
-        count++;
-        if (count == maxcount)
+        // test to see if a reset has happened whilst we
+        // were waiting for an ACK
+        uint8 enableInterrupts = CyEnterCriticalSection();
+        reset = usb_reset;
+        usb_reset = 0;
+        CyExitCriticalSection(enableInterrupts);
+        //
+        if (reset)
         {
-            return false;
+            // slow
+            flash(250,10);
+            //
+            break;
         }
     }
     return true;
@@ -160,7 +155,8 @@ bool In_EP()
     }
 #endif    
 }
-	
+
+//-----------------------------------------------------------------------------
 //
 void Out_EP (void)
 {
