@@ -39,8 +39,10 @@
 
 #include <device.h>
 
+typedef unsigned char bool;
+enum { false = 0, true = 1 };
 
-void In_EP (void);
+bool In_EP ();
 void Out_EP (void);
 
 /* External variable where OUT Report data is stored */
@@ -52,12 +54,14 @@ static unsigned char Keyboard_Data[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static unsigned char LED_Data[1] = {0 };
 
 static uint8_t btn = 0;
-
-
+int sof_flag = 0;
+const int maxcount = 5000;
 int main()
 {
     int i = 0;
-    
+    int sof_prev = 0;
+    int sof_x = 0;
+    bool ok = false;
     CYGlobalIntEnable; 
 
     /*Start USBFS Operation and Device 0 and with 5V operation*/ 
@@ -90,37 +94,62 @@ int main()
     
     reg_led_Write(0);
 
+    //CyWdtStart(CYWDT_1024_TICKS,CYWDT_LPMODE_NOCHANGE); 
+    sof_flag = 0;
     for(;;)
     {
         //
         Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
         
-		/*Checks for ACK from host*/
-		if(USBFS_1_bGetEPAckState(1)) 
+		// checks for ACK from host
+		// if (USBFS_1_bGetEPAckState(1)) 
 		{
-			/*Function to Send Data to PC*/
-			In_EP(); 	
-
-			/*Function to recieve data from PC*/	
-			Out_EP();
-
+			//Function to Send Data to PC
+            ok = In_EP();
+            // we got an ack in time
+			if (ok == true)
+            {
+    			Out_EP();
+            }
+            // clear watchdog
+            // CyWdtClear();
 		}
+    
+        // flash to indicate a problem
+        if (ok == false)
+        {
+            reg_led_Write(1);
+            CyDelay(100);
+            reg_led_Write(0);
+            CyDelay(50);
+            reg_led_Write(1);
+            CyDelay(100);
+            reg_led_Write(0);
+            ok = true;
+        }
     }
     
     return 0;
 }
 
 //
-void In_EP (void)
+bool In_EP()
 {
+    int count = 0;
+    //
     Keyboard_Data[0] = (Pin_Btn_Read() == 0 ? 0xFF : 0x00);
-	/*Loads EP1 for a IN transfer to PC*/
+	// Loads EP1 for a IN transfer to PC
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
-	/*Waits for ACK from PC*/
-	while(!USBFS_1_bGetEPAckState(1))
+	// Waits for ACK from PC
+	while (!USBFS_1_bGetEPAckState(1))
     {
-        /* NOP */;
+        count++;
+        if (count == maxcount)
+        {
+            return false;
+        }
     }
+    return true;
 #if 0
     /*Loads EP1 for a IN transfer to PC. This simulates the buttons being released.*/
 	USBFS_1_LoadInEP(1, Keyboard_Data, 8);
